@@ -1,0 +1,110 @@
+#!/usr/bin/env bash
+
+## Initialize Coturn site
+##
+
+# Console colors
+red='\033[0;91m'
+red_bg='\033[101m'
+yellow_bg='\033[43;90m'
+green='\033[0;32m'
+green_bg='\033[42m'
+yellow='\033[1;33m'
+NC='\033[0m'
+
+echo-green () { echo -e "${green}$1${NC}"; }
+echo-yellow () { echo -e "${yellow}$1${NC}"; }
+echo-red () { echo -e "${red}$1${NC}"; }
+
+build ()
+{
+  SCRIPT_PARENT=$(dirname $0)
+  PROJECT_ROOT="${SCRIPT_PARENT%/*}"
+  if [ "$PWD" != "$PROJECT_ROOT" ]; then
+    echo-red "---Make sure you are in project root ($PROJECT_ROOT) for build to run"
+    exit 1
+  fi
+
+  echo-yellow "---Building the Coturn container"
+  # Stop container and remove it
+  docker stop cot && docker rm cot
+  # Remove image
+  docker image rm cot
+  # Remove all dangling images
+  echo y | docker image prune
+  # Rebuild image and start container
+  docker build --tag cot -f Dockerfile .
+  # Run the container
+  docker run \
+    --name cot \
+    -dp 8011:80 \
+    -e HOST_USR=$(id -u) \
+    -e HOST_GRP=$(id -g) \
+    -e USE_LOCAL=enabled \
+    cot
+
+  # Get container's IP
+  CONTAINER_IP=$(docker container inspect -f {{.NetworkSettings.IPAddress}} cot)
+  # Set container's host name
+  CONTAINER_HOST="cot"
+  # Set local hostname if it does not exist
+  sed -i \
+    -e '/^#\?\(\s*'${CONTAINER_IP}'\s* \s*\).*/{s//\1'${CONTAINER_HOST}'/;:a;n;ba;q}' \
+    -e '$a'${CONTAINER_IP}' '${CONTAINER_HOST} /etc/hosts
+}
+
+start ()
+{
+  echo-green "---Starting the Coturn container"
+  docker start cot
+}
+
+stop ()
+{
+  echo-red "---Stopping the Coturn container"
+  docker stop cot
+}
+
+restart ()
+{
+  echo-green "---Restarting the Coturn container"
+  docker container restart cot
+
+  # Get container's IP
+  CONTAINER_IP=$(docker container inspect -f {{.NetworkSettings.IPAddress}} cot)
+  # Set container's host name
+  CONTAINER_HOST="cot"
+  # Set local hostname if it does not exist
+  sed -i \
+    -e '/^#\?\(\s*'${CONTAINER_IP}'\s* \s*\).*/{s//\1'${CONTAINER_HOST}'/;:a;n;ba;q}' \
+    -e '$a'${CONTAINER_IP}' '${CONTAINER_HOST} /etc/hosts
+}
+
+ssh ()
+{
+  if [[ -z "$1" ]]; then
+    echo-green "---Logging as ${yellow}turnserver${green} user into the Coturn container"
+    docker exec -it --user turnserver cot bash
+  else
+    echo-green "---Logging as ${yellow}$1${green} user into the Coturn container"
+    docker exec -it --user $1 cot bash
+  fi
+}
+
+# --- Runtime ---
+
+case "$1" in
+    build)
+        build ;;
+    start)
+        start ;;
+    stop)
+        stop ;;
+    restart)
+        restart ;;
+    ssh)
+        ssh $2 ;;
+    *)
+        echo $"Usage: cot {build|start|stop|restart|ssh}"
+        exit 1
+esac
