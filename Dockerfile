@@ -40,12 +40,12 @@ RUN export SUPERCRONIC_LATEST=$(curl -Ls -o /dev/null -w %{url_effective} https:
     ln -s "/usr/local/bin/${SUPERCRONIC}" /usr/local/bin/supercronic
 
 ### Local bash distro
-RUN cd /root && bash -c "$(curl -fsSL https://raw.githubusercontent.com/ohmybash/oh-my-bash/master/tools/install.sh)" \
+RUN cd ~/ && bash -c "$(curl -fsSL https://raw.githubusercontent.com/ohmybash/oh-my-bash/master/tools/install.sh)" \
     # Use a theme that clearly shows user, path and git branch
-    sed -i 's/OSH_THEME.*/OSH_THEME="axin"/g' /root/.bashrc \
+    sed -i 's/OSH_THEME.*/OSH_THEME="axin"/g' ~/.bashrc \
     # Helpful aliases to get around the container while debugging
-    echo "alias l='ls -la'" >> /root/.bashrc \
-    echo "alias s='cd ..'" >> /root/.bashrc \
+    echo "alias l='ls -la'" >> ~/.bashrc \
+    echo "alias s='cd ..'" >> ~/.bashrc \
     # Use bash
     usermod -s /bin/bash root
 
