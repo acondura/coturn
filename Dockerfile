@@ -53,7 +53,7 @@ RUN cd ~/ && bash -c "$(curl -fsSL https://raw.githubusercontent.com/ohmybash/oh
 EXPOSE 443
 
 # Supervisor prep
-RUN mkdir -p /etc/supervisor/includes
+RUN mkdir -p /etc/supervisor/includes /var/log/supervisor
 # Main supervisor config
 COPY supervisor/supervisord.conf /etc/supervisor
 # Supervisor programs
